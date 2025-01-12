@@ -1,0 +1,6 @@
+name: "hitbox"
+instances {
+  id: "hitbox"
+  prototype: "/main/actor/hitboxes/hitbox.go"
+}
+scale_along_z: 0

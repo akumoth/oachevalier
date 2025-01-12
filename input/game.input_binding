@@ -1,0 +1,60 @@
+key_trigger {
+  input: KEY_UP
+  action: "moveUp"
+}
+key_trigger {
+  input: KEY_DOWN
+  action: "moveDown"
+}
+key_trigger {
+  input: KEY_LEFT
+  action: "moveLeft"
+}
+key_trigger {
+  input: KEY_RIGHT
+  action: "moveRight"
+}
+key_trigger {
+  input: KEY_Z
+  action: "jump"
+}
+key_trigger {
+  input: KEY_X
+  action: "attack"
+}
+key_trigger {
+  input: KEY_C
+  action: "furia"
+}
+mouse_trigger {
+  input: MOUSE_BUTTON_1
+  action: "touch"
+}
+gamepad_trigger {
+  input: GAMEPAD_LPAD_UP
+  action: "up"
+}
+gamepad_trigger {
+  input: GAMEPAD_LPAD_DOWN
+  action: "down"
+}
+gamepad_trigger {
+  input: GAMEPAD_LPAD_LEFT
+  action: "left"
+}
+gamepad_trigger {
+  input: GAMEPAD_LPAD_RIGHT
+  action: "right"
+}
+gamepad_trigger {
+  input: GAMEPAD_RPAD_DOWN
+  action: "jump"
+}
+gamepad_trigger {
+  input: GAMEPAD_RPAD_LEFT
+  action: "attack"
+}
+gamepad_trigger {
+  input: GAMEPAD_RPAD_RIGHT
+  action: "furia"
+}

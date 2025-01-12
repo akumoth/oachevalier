@@ -1,0 +1,5 @@
+function init(self)
+	msg.post("#", "run_after_init")
+	local x, y, w, h = tilemap.get_bounds("#tiles")
+	msg.post("player/camera", "define_bounds", { width = w, height = h } )
+end

@@ -1,0 +1,12 @@
+
+
+QmoveUp
+RmoveDown
+SmoveLeft
+T	moveRight
+9jump
+
+7attack
+	"furia	touch
+up	downleft	rightjump
+attack	furia

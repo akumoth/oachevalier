@@ -1,0 +1,49 @@
+local parent = nil
+
+local res = vmath.vector3(320,240,0)
+local level_bounds = nil
+
+function init(self)
+	msg.post("#camera", "acquire_camera_focus")
+	msg.post("@render:", "use_camera_projection")
+end
+
+local function limit_camera(bounds, obj_p, cam_p)
+	if obj_p.x  - res.x/2 < 0 then
+		cam_p.x = res.x/2
+	end
+
+	if obj_p.x + res.x/2 > bounds.x then
+		cam_p.x = bounds.x - res.x/2
+	end
+
+	if obj_p.y - res.y/2 < 0 then
+		cam_p.y = res.y/2
+	end
+
+	if obj_p.y + res.y/2 > bounds.y then
+		cam_p.y = bounds.y - res.y/2
+	end
+end
+
+function fixed_update(self, dt)
+	local bounds = level_bounds or res
+	local obj_p = go.get_position(parent)	
+	local cam_p = vmath.vector3(obj_p)
+	
+	limit_camera(bounds, obj_p, cam_p)
+	
+	go.set_position(cam_p)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("follow") then
+		parent = sender
+	elseif message_id == hash("unfollow") then
+		parent = nil
+	elseif message_id == hash("define_bounds") then
+		level_bounds = vmath.vector3(message.width*16, message.height*16, 0)
+		if level_bounds.x < res.x then level_bounds.x = res.x end
+		if level_bounds.y < res.y then level_bounds.y = res.y end
+	end
+end

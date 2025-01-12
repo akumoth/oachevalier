@@ -1,0 +1,109 @@
+animations {
+  id: "idle"
+  images {
+    image: "/data/spr/debug/idle/idle.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "walk"
+  images {
+    image: "/data/spr/debug/walk/walk1.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk1.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk2.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk2.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk3.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk3.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk4.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk4.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk5.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk5.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk6.png"
+  }
+  images {
+    image: "/data/spr/debug/walk/walk6.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "jump"
+  images {
+    image: "/data/spr/debug/jump/jump1.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump2.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump3.png"
+  }
+}
+animations {
+  id: "air"
+  images {
+    image: "/data/spr/debug/air/rise1.png"
+  }
+  images {
+    image: "/data/spr/debug/air/rise2.png"
+  }
+  images {
+    image: "/data/spr/debug/air/rise3.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "nground"
+  images {
+    image: "/data/spr/debug/attacks/nground/jab1.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab2.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab3.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab3.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab4.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab4.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab5.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nground/jab6.png"
+  }
+}
+extrude_borders: 2

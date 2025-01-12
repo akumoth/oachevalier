@@ -1,0 +1,66 @@
+go.property("x_offset", 0)
+go.property("y_offset", 0)
+go.property("width", 10)
+go.property("height", 10)
+go.property("is_player", false)
+go.property("is_hitbox", false)
+go.property("is_clashable", false)
+go.property("damage", 0)
+go.property("knockback", 0)
+go.property("knockback_angle", 0)
+go.property("parent", msg.url())
+go.property("duration", -1)
+go.property("flip", false)
+
+function init(self)
+	go.set_parent(nil, self.parent, true)
+	local hitbox_data = {
+		type = physics.SHAPE_TYPE_BOX,
+		dimensions = vmath.vector3(self.width, self.height, 0)
+	}
+	physics.set_shape("#hitbox", "hitbox", hitbox_data)
+
+	if self.flip then
+		self.x_offset = -self.x_offset
+	end
+	
+	local self_prefix = "enemy_"
+	local other_prefix = "player_"
+	
+	if self.is_player then
+		self_prefix = "player_"
+		other_prefix = "enemy_"
+	end
+
+	if self.is_hitbox then
+		physics.set_group("#hitbox", self_prefix .. "hitbox" )
+		physics.set_maskbit("#hitbox", other_prefix .. "hurtbox", true)
+		if self.is_clashable then
+			physics.set_maskbit("#hitbox", other_prefix .. "hitbox", true)
+		end
+	else
+		physics.set_group("#hitbox", self_prefix .. "hurtbox" )
+		physics.set_maskbit("#hitbox", other_prefix .. "hitbox", true)
+	end
+end
+
+function fixed_update(self, dt)
+	go.set_position(vmath.vector3(self.x_offset, self.y_offset, 0))
+	if self.duration ~= -1 then
+		self.duration = self.duration - 1
+		if self.duration == 0 then
+			go.delete()
+		end
+	end
+	
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("flip") then
+		if message.flip then 
+			self.x_offset = -self.x_offset
+		else
+			self.x_offset = self.x_offset
+		end
+	end
+end
