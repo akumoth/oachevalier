@@ -12,7 +12,9 @@ function movement.new(_data)
 		last_dir = vmath.vector3(),
 		
 		speed = vmath.vector3(),
-
+		stored_speed = vmath.vector3(),
+		influence_mult = .1,
+		
 		walk_speed = _data.walk_speed or 180,
 		jump_speed = _data.jump_speed or 780,
 
@@ -21,8 +23,10 @@ function movement.new(_data)
 		weight = _data.weight or 1,
 		fall_speed = _data.fall_speed or -250, -- max falling speed
 		ignore_gravity = false, -- ignore gravity for this frame
-
+		ignore_fallcap = false, -- ignore fallspeed cap
+		
 		slope_suck = -25, -- amount to suck actor towards slope by
+		stop = 0, -- frames to completely stop movement during
 	}
 
 	local self = setmetatable(data, movement)
@@ -37,8 +41,9 @@ function movement:update_vertical_speed(velocity)
 	self.speed.y = velocity
 end
 
-function movement:update_horizontal_speed(velocity)
+function movement:update_horizontal_speed(velocity, check_slope)
 	if velocity == 0 then self.speed.x = velocity return end
+	if check_slope == nil then check_slope = true end
 
 	local new_dir = velocity/math.abs(velocity)
 
@@ -49,7 +54,7 @@ function movement:update_horizontal_speed(velocity)
 
 	self.speed.x = velocity
 
-	if self.collision then
+	if self.collision and check_slope then
 		if self.collision.slope_right then
 			self.speed.y = (velocity * -new_dir * self.collision.slope_right.y) + self.slope_suck
 			self.speed.x = velocity * (self.collision.slope_right.y)
@@ -60,12 +65,30 @@ function movement:update_horizontal_speed(velocity)
 	end
 end
 
+function movement:get_speed_dir()
+	local xdir = self.speed.x/math.abs(self.speed.x) 
+	if xdir ~= xdir then
+		xdir = 0
+	end
+
+	local ydir = self.speed.y/math.abs(self.speed.y) 
+	if ydir ~= ydir then
+		ydir = 0
+	end
+
+	local dir = vmath.vector3(xdir, ydir, 0)
+	
+	return dir
+end
+
 function movement:change_speed_length(amount)
 	self.speed = self.speed * (1 + amount/vmath.length(self.speed))
 end
 
 function movement:apply_gravity()
-	if self.ignore_gravity then return end
+	
+	if self.ignore_gravity or self.stop > 0 then return end
+	
 	if self.speed.y > self.fall_speed then
 		local gravity = self.gravity_speed
 		if self.speed.y > 0 and self.speed.y < 100 then
@@ -73,7 +96,9 @@ function movement:apply_gravity()
 		end
 		self.speed.y = self.speed.y + (gravity * self.weight) 
 	else
-		self.speed.y = self.fall_speed
+		if not self.ignore_fallcap then
+			self.speed.y = self.fall_speed
+		end
 	end
 end
 

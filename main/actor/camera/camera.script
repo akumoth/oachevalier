@@ -32,7 +32,6 @@ function fixed_update(self, dt)
 	local cam_p = vmath.vector3(obj_p)
 	
 	limit_camera(bounds, obj_p, cam_p)
-	
 	go.set_position(cam_p)
 end
 

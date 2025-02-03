@@ -1,3 +1,5 @@
+local angle = require('main.utils.angle')
+
 go.property("x_offset", 0)
 go.property("y_offset", 0)
 go.property("width", 10)
@@ -22,6 +24,7 @@ function init(self)
 
 	if self.flip then
 		self.x_offset = -self.x_offset
+		self.knockback_angle = angle:flip_angle(self.knockback_angle)
 	end
 	
 	local self_prefix = "enemy_"
@@ -56,7 +59,26 @@ function fixed_update(self, dt)
 end
 
 function on_message(self, message_id, message, sender)
+	if message_id == hash("trigger_response") then
+		local scr_url = msg.url(nil, message.other_id, "hitbox_script")
+		
+		if go.get(scr_url, "is_hitbox") and not self.is_hitbox then
+			msg.post(self.parent, "received_hitbox", {
+				hitbox_parent = go.get(scr_url, "parent"),
+				knockback = go.get(scr_url, "knockback"),
+				angle = go.get(scr_url, "knockback_angle"),
+				damage = go.get(scr_url, "damage")
+			})	
+		elseif go.get(scr_url, "is_hitbox") and self.is_clashable then
+			msg.post(self.parent, "received_clash", {
+				hitbox_parent = go.get(scr_url, "parent"),
+				flip = go.get(scr_url, "flip")
+			})	
+		end
+	end
+	
 	if message_id == hash("flip") then
+		self.flip = message.flip
 		if message.flip then 
 			self.x_offset = -self.x_offset
 		else

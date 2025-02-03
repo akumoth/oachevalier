@@ -1,11 +1,12 @@
 
-˜‰
-õˆ-- import libraries and object types to use
+Õ¼
+²¼-- import libraries and object types to use
 local input_parser = require('main.actor.states.input_parser')
 local machine = require('main.actor.states.state_machine')
 local state = require('main.actor.states.state')
 local collib = require('main.actor.collision.collision')
 local movelib = require('main.actor.movement.movement')
+local angle = require('main.utils.angle')
 
 -- get table of player hitboxes (different types of actors will have to import different hitbox tables, wonder how i'll refactor that...)
 local hitboxes = require('main.actor.hitboxes.player.player_hitboxes')
@@ -34,17 +35,59 @@ local last_hitbox = {
 	frame = nil,
 }
 
+-- URL of the game objects that have the hitboxes we are being attacked with are placed here.
+-- This prevents the actor from being hit by the same hitbox twice.
+--
+-- When they spawn a hitbox, a message is sent that removes the given URL from the list,
+-- so that this actor may be hit again. 
+local ignore_senders = {}
+
+-- Debug health values.
+local max_health = 100
+local health = max_health
+
+-- Hitstun is equal to knockback units * a fixed hitstun modifier, which for now is 0.4x because that's how it was in Melee.
+
+local hitstun_modifier = 0.33
+local knockback_modifier = 10
+
 -- Updates the actor's current position based on their speed + any nearby walls or floors they need to be pushed by.
 local function update_position(dt)
+	local step = 3 -- 
+	
 	local p = go.get_position()
 
 	local distance = movement.speed * dt -- multiply by delta time to avoid funny CPU speed shenanigans (that's how it works, right?)
+
+	if movement.stop > 0 then -- freeze movement for the frames specified by movement.stop
+		movement.stop = movement.stop - 1
+		distance = vmath.vector3()
+		print("stopped!")
+	end
+	
 	local world_p = go.get_world_position()
 	collision.position = p
 	collision.world_position = world_p
-	local origin = world_p + distance
-	local offset = collision:handle_collisions(origin, movement.speed) -- calculate the distance the actor will be pushed by when going towards a wall or floor
-	go.set_position(p + distance + offset)
+	
+	local steps = math.max(1,math.ceil(vmath.length(distance)/step))
+
+	local origin = vmath.vector3(world_p)
+	local offset = vmath.vector3()
+
+	for i=1,steps,1 do
+		if distance ~= vmath.vector3() then
+			distance = movement.speed * dt
+		end
+		origin = origin + (distance/steps)
+		offset = collision:handle_collisions(origin, movement)	
+		go.set_position(p + distance*i/steps + offset)
+		if collision:check_move_into_collision(movement.speed, true) then
+			break
+		end
+	end 
+	
+
+	
 end
 
 -- Resets the currently spawned hitboxes.
@@ -108,15 +151,15 @@ local function right()
 end
 
 local function do_foxtrot()
-	return collision.ground_contact and input_parser.check_step({hash("moveLeft"),hash("moveRight")})
+	return collision.contact.d and input_parser.check_step({hash("moveLeft"),hash("moveRight")})
 end
 
 local function do_jump()
-	return collision.ground_contact and input_parser.check_length(hash("jump"), 5)
+	return collision.contact.d and input_parser.check_length(hash("jump"), 5)
 end
 
 local function do_attack()
-	return collision.ground_contact and input_parser.check_length(hash("attack"), 5)
+	return collision.contact.d and input_parser.check_length(hash("attack"), 5)
 end
 
 local function do_airdash()
@@ -127,6 +170,12 @@ end
 local function get_airdash_dir()
 	local last_dir = input_parser.last_input({hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
 	return input_parser.filter_input(last_dir, {hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+end
+
+-- Get direction for DI.
+-- For non-player actors, this function should choose randomly.
+local function get_influence_dir()
+	return input_parser.dir_input_vector()
 end
 
 function init(self)
@@ -163,7 +212,7 @@ function init(self)
 
 					-- The collision object's "is_falling" message takes care of switching to the falling
 					-- state. This has the side effect of giving around 2-3 frames of coyote time.
-					if not collision.ground_contact then 
+					if not collision.contact.d then 
 						movement:apply_gravity()
 					end
 
@@ -199,10 +248,11 @@ function init(self)
 				end,
 				update = function(dt)
 					if movement.move_dir.x ~= 0 then
+						movement:update_horizontal_speed(movement.walk_speed * movement.move_dir.x)
 						movement:update_vertical_speed(movement.slope_suck)
 						movement:update_facing_dir(update_sprite)
-						movement:update_horizontal_speed(movement.walk_speed * movement.move_dir.x)
-						if not collision.ground_contact then 
+						
+						if not collision.contact.d then 
 							movement:apply_gravity()
 						end
 						
@@ -239,11 +289,7 @@ function init(self)
 				if states.foxtrot.vals.can_cancel and state_duration > 17 then
 					movement:update_facing_dir(update_sprite)
 				elseif state_duration < 11 then
-					local flip = movement.speed.x/math.abs(movement.speed.x) 
-
-					if flip ~= flip then
-						flip = 0
-					end
+					local flip = movement:get_speed_dir().x
 					
 					movement:update_horizontal_speed(movement.brake_speed * flip)
 				end
@@ -310,38 +356,40 @@ function init(self)
 		}),
 		falling = state({
 			name = 'falling',
-			enter = function()
+			enter = function(from)
 				sprite.play_flipbook("#actor_sprite", hash("air"))
 				collision.do_snap = false
-				states.falling.vals.last_xspeed = movement.speed.x
-				states.falling.vals.max_xspeed[1] = math.abs(states.falling.vals.last_xspeed) + movement.drift_speed
-				states.falling.vals.max_xspeed[2] = math.abs(states.falling.vals.last_xspeed) - movement.drift_speed
+				if from == 'hitstunned' then
+					movement:update_horizontal_speed(math.min(movement.speed.x, movement.walk_speed))
+				end
+				local last_xspeed = movement.speed.x
+				states.falling.vals.max_xspeed[1] = math.abs(last_xspeed) + movement.drift_speed
+				states.falling.vals.max_xspeed[2] = math.abs(last_xspeed) - movement.drift_speed
 				if movement.speed.x ~= 0 then
-					states.falling.vals.max_xspeed[1] = math.abs(states.falling.vals.last_xspeed)
-					states.falling.vals.max_xspeed[2] = math.max(math.abs(states.falling.vals.last_xspeed) - movement.drift_speed, 10)
+					states.falling.vals.max_xspeed[1] = math.abs(last_xspeed)
+					states.falling.vals.max_xspeed[2] = math.max(math.abs(last_xspeed) - movement.drift_speed, 10)
 				end
 				state_duration = 8
 			end,
-			exit = function()
-				states.falling.vals.last_xspeed = 0
+			exit = function(to) 
 			end,
 			update = function(dt)
-				movement:apply_gravity()
-				if collision.ground_contact then
+				
+				if collision.contact.d then
 					if movement.move_dir.x == 0 then 
 						fsm:stop()
 					else
 						fsm:walk()
 					end
 				end
-				
+
 				if movement.speed.y < 100 then
 					if movement.move_dir.x ~= 0 then
 						local fall_xspeed = movement.speed.x + (600 * movement.move_dir.x * dt)
 						
 						if math.abs(fall_xspeed) < states.falling.vals.max_xspeed[1] and
 							math.abs(fall_xspeed) > states.falling.vals.max_xspeed[2] then
-							movement:update_horizontal_speed(fall_xspeed)
+								movement:update_horizontal_speed(fall_xspeed)
 						end
 					end
 				end
@@ -352,12 +400,13 @@ function init(self)
 					fsm:airdash()
 				end
 
+				movement:apply_gravity()
+				
 				if state_duration ~= 0 then
 					state_duration = state_duration - 1
 				end
 			end,
 			vals = {
-				last_xspeed = 0,
 				max_xspeed = {0, 0}
 			}
 		}),
@@ -365,6 +414,7 @@ function init(self)
 			name = 'airdashing',
 			enter = function (from)
 				movement.ignore_gravity = true
+				collision.no_reset = true
 				movement:update_horizontal_speed(0)
 				movement:update_vertical_speed(0)
 				state_duration = 35
@@ -386,11 +436,11 @@ function init(self)
 			exit = function (to)
 				movement.speed.x = movement.speed.x * .75
 				movement.ignore_gravity = false
+				collision.no_reset = false
 			end,
 			update = function(dt)
 				local dir = movement.facing_dir.x
 				local angle_q = (math.pi/2)/10
-				
 				
 				if states.airdashing.vals.dir == hash("moveLeft") or states.airdashing.vals.dir == hash("moveRight") then
 					if state_duration < 18 and state_duration > 10 then
@@ -407,7 +457,7 @@ function init(self)
 					movement.speed.y = math.max(movement.speed.y, movement.fall_speed)
 				end
 				
-				if collision.ground_contact then
+				if collision.contact.d then
 					fsm:stop()
 				end
 				
@@ -415,7 +465,6 @@ function init(self)
 					fsm:fall()
 				end
 
-				
 				state_duration = state_duration - 1
 				
 			end,
@@ -453,6 +502,112 @@ function init(self)
 				end
 			end,
 		}),
+		hitstunned = state({
+			name = 'hitstunned',
+			enter = function (from) 
+				movement.ignore_fallcap = true
+				collision.do_snap = false
+				
+				movement:reset_speed()
+
+				states.hitstunned.vals.hitstun = (states.hitstunned.vals.knockback * hitstun_modifier)/movement.weight
+				states.hitstunned.vals.speed = (states.hitstunned.vals.knockback * knockback_modifier)/movement.weight
+				states.hitstunned.vals.total_bounces = 0
+				
+				movement:update_horizontal_speed(states.hitstunned.vals.speed)
+				movement:rotate_dir(states.hitstunned.vals.angle*(math.pi/180))
+
+				if collision:check_move_into_collision(movement.speed) then
+					if collision.contact.l or collision.contact.r then movement.speed.x = -movement.speed.x end
+					if collision.contact.u or collision.contact.d then movement.speed.y = -movement.speed.y end
+					states.hitstunned.vals.angle = math.deg(math.atan2(movement.speed.y, movement.speed.x))
+				end
+				
+				local hitfreeze = math.max(3, math.floor(states.hitstunned.vals.knockback / 20))
+				
+				state_duration = states.hitstunned.vals.hitstun + hitfreeze
+				movement.stop = hitfreeze
+				
+			end,
+			exit = function (to) 
+				movement.ignore_fallcap = false
+			end,
+			update = function (dt) 
+				local bounced = false
+				-- bounce off walls/floor
+				if vmath.length(movement.stored_speed) > 400 and movement.stop == 0 and states.hitstunned.vals.total_bounces < 3 then
+
+					if (collision:check_move_into_collision(movement.stored_speed)) then
+						print("stop!")
+						
+						local slope = collision.slope_left or collision.slope_right or collision.slope_upleft or collision.slope_upright
+						movement:reset_speed()
+						movement:update_horizontal_speed(vmath.length(movement.stored_speed)*0.9, false)
+
+						print("old angle: " .. states.hitstunned.vals.angle)
+						local flipped_angle = states.hitstunned.vals.angle
+						if (collision.contact.d and (angle.normalize_angle(flipped_angle) > 180) or (not collision.contact.d)) then 
+							flipped_angle = angle:flip_angle(flipped_angle, "v")
+						end
+						
+						if (collision.contact.l or collision.contact.r) and not slope then flipped_angle = angle:flip_angle(flipped_angle, "h") end
+
+						print("flipped angle: " .. flipped_angle)
+						movement:rotate_dir(flipped_angle*(math.pi/180))
+						if slope then
+							local slope_angle = math.deg(math.atan2(slope.y, slope.x)) 
+							print(slope_angle)
+							if slope_angle < 0 then slope_angle = 360 + slope_angle end
+							
+							if slope_angle > 90 and slope_angle < 270 then 
+								slope_angle = angle:flip_angle(slope_angle, "h")
+							else 
+								slope_angle = 360 - slope_angle
+							end 
+							movement:rotate_dir(slope_angle*(math.pi/180))
+						end
+
+						states.hitstunned.vals.angle = math.deg(math.atan2(movement.speed.y, movement.speed.x))
+						print("angle: " .. states.hitstunned.vals.angle) 
+						movement.stop = math.max(3, math.ceil(vmath.length(movement.speed)/300))
+						state_duration = state_duration + math.floor(states.hitstunned.vals.hitstun/2) + movement.stop
+						bounced = true
+						states.hitstunned.vals.total_bounces = states.hitstunned.vals.total_bounces + 1
+						print("speed: " .. tostring(movement.speed))
+					end
+				end
+
+				if movement.stop == 1 or bounced then
+					local influence_dir = get_influence_dir()
+					local speed_dir = movement:get_speed_dir()
+					if speed_dir.x == 0 then speed_dir.x = 1 end
+					movement:update_horizontal_speed(movement.speed.x + math.max(350, math.abs(movement.speed.x)) * (speed_dir.x * influence_dir.x * movement.influence_mult), false)
+					movement:update_vertical_speed(movement.speed.y + math.max(350, math.abs(movement.speed.y)) * (speed_dir.y * influence_dir.y * movement.influence_mult))
+					bounced = false
+				end
+				
+				movement:apply_gravity()
+				movement:change_speed_length(-10)
+				if state_duration < 1 then
+					if not collision.contact.d then
+						fsm:fall()
+					else
+						fsm:stop()
+					end
+				end
+				
+				state_duration = state_duration - 1
+				
+				movement.stored_speed = vmath.vector3(movement.speed)
+			end, 
+			vals = {
+				hitstun = 0,
+				knockback = 0,
+				speed = 0,
+				angle = 0,
+				total_bounces = 0
+			}
+		})
 	}
 
 	fsm  = machine.create({
@@ -462,6 +617,7 @@ function init(self)
 			{ name = 'walk', from = 'foxtrot', to = 'walking' },
 			{ name = 'walk', from = 'falling', to = 'walking' },
 			{ name = 'walk', from = 'attacking', to = 'walking' },
+			{ name = 'walk', from = 'hitstunned', to = 'walking' },
 			
 			{ name = 'step', from = 'idle', to = 'foxtrot' },
 			{ name = 'step', from = 'foxtrot', to = 'foxtrot' },
@@ -475,6 +631,7 @@ function init(self)
 			{ name = 'fall', from = 'foxtrot', to = 'falling' },
 			{ name = 'fall', from = 'jumping', to = 'falling' },
 			{ name = 'fall', from = 'airdashing', to = 'falling' },
+			{ name = 'fall', from = 'hitstunned', to = 'falling' },
 			
 			{ name = 'airdash', from = 'falling', to = 'airdashing' },
 			
@@ -483,10 +640,19 @@ function init(self)
 			{ name = 'stop', from = 'falling', to = 'idle' },
 			{ name = 'stop', from = 'airdashing', to = 'idle' },
 			{ name = 'stop', from = 'attacking', to = 'idle' },
+			{ name = 'stop', from = 'hitstunned', to = 'idle' },
 			
 			{ name = 'attack', from = 'idle', to = 'attacking' },
 			{ name = 'attack', from = 'walking', to = 'attacking' },
 			{ name = 'attack', from = 'foxtrot', to = 'attacking' },
+
+			{ name = 'hitstun', from = 'idle', to = 'hitstunned' },
+			{ name = 'hitstun', from = 'walking', to = 'hitstunned' },
+			{ name = 'hitstun', from = 'foxtrot', to = 'hitstunned' },
+			{ name = 'hitstun', from = 'jumping', to = 'hitstunned' },
+			{ name = 'hitstun', from = 'falling', to = 'hitstunned' },
+			{ name = 'hitstun', from = 'airdashing', to = 'hitstunned' },
+			{ name = 'hitstun', from = 'attacking', to = 'hitstunned' },
 		},
 		callbacks = {
 			onstop = function(self, event, from, to)
@@ -513,16 +679,17 @@ end
 
 function update(self, dt)
 	msg.post("@render:", "draw_line", { start_point = go.get_world_position(), end_point = go.get_world_position() + movement.speed, color = vmath.vector4(1, 0, 0, 1) })
-	collision:show_debug_rays(go.get_world_position())
-	update_hitboxes()
+	msg.post("@render:", "draw_debug_text", { text = "Health: " .. health, position = vmath.vector3(200, 180, 0), color = vmath.vector4(0, 1, 0, 1) })
+
 end
 
 function fixed_update(self, dt)
 	input_parser.update_inputs()
 	movement:update_move_dir(left, right)
+	
 	states[fsm.current].update(dt)
 	update_position(dt)
-
+	update_hitboxes()
 end
 
 function on_input(self, action_id, action)
@@ -530,7 +697,19 @@ function on_input(self, action_id, action)
 end
 
 function on_message(self, message_id, message, sender)
-	if message_id == hash("is_falling") and fsm.current ~= "jumping" and fsm.current ~= "airdashing" then
+	if message_id == hash("received_hitbox") and not ignore_senders[message.hitbox_parent.path] then
+		ignore_senders[message.hitbox_parent.path] = true
+		health = health - message.damage
+		states.hitstunned.vals.knockback = message.knockback
+		states.hitstunned.vals.angle = message.angle
+		fsm:hitstun()
+	end
+
+	if message_id == hash("reset_hitbox") and ignore_senders[sender.path] then
+		ignore_senders[message.hitbox_parent.path] = nil
+	end
+	
+	if message_id == hash("is_falling") and not collision.contact.d and fsm.current ~= "jumping" and fsm.current ~= "airdashing" and fsm.current ~= "hitstunned" then
 		fsm:fall()
 	end
 end
@@ -540,4 +719,4 @@ function on_reload(self)
 	-- Learn more: https://defold.com/manuals/hot-reload/
 	-- Remove this function if not needed
 end
-@main/actor/controller.scriptmain.actor.states.input_parsermain.actor.states.state_machinemain.actor.states.statemain.actor.collision.collisionmain.actor.movement.movement*main.actor.hitboxes.player.player_hitboxes$/main/actor/states/input_parser.luac%/main/actor/states/state_machine.luac/main/actor/states/state.luac$/main/actor/collision/collision.luac"/main/actor/movement/movement.luac0/main/actor/hitboxes/player/player_hitboxes.luac" 
+@main/actor/controller.scriptmain.actor.states.input_parsermain.actor.states.state_machinemain.actor.states.statemain.actor.collision.collisionmain.actor.movement.movementmain.utils.angle*main.actor.hitboxes.player.player_hitboxes$/main/actor/states/input_parser.luac%/main/actor/states/state_machine.luac/main/actor/states/state.luac$/main/actor/collision/collision.luac"/main/actor/movement/movement.luac/main/utils/angle.luac0/main/actor/hitboxes/player/player_hitboxes.luac" 

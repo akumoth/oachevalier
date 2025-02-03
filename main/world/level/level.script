@@ -1,5 +1,22 @@
+
+local test_hitbox = {
+	x_offset=545,
+	y_offset=100,
+	width=20,
+	height=20,
+	is_hitbox=true,
+	is_clashable=true,
+	damage=20,
+	knockback=150,
+	knockback_angle=330
+}
+
+local hitbox_id
+
 function init(self)
 	msg.post("#", "run_after_init")
+	test_hitbox.parent = msg.url()
+	hitbox_id = factory.create("#hitbox_factory", nil, nil, test_hitbox)
 	local x, y, w, h = tilemap.get_bounds("#tiles")
 	msg.post("player/camera", "define_bounds", { width = w, height = h } )
 end

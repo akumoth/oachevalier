@@ -48,59 +48,55 @@ function collision.new(bounding_box)
 
 	data.fall_buffer = 3
 	data.falling_dur = 0
-	data.ground_contact = false
-	data.wall_contact = nil
+	data.contact = {
+		l = false,
+		r = false,
+		u = false,
+		d = false
+	}
 	
 	data.do_snap = false
 	data.snap_length = vmath.vector3(0,-15,0)
 	
 	data.slope_left = nil
 	data.slope_right = nil
-
+	data.slope_upleft = nil
+	data.slope_upright = nil
+	
 	local self = setmetatable(data, collision)
 	self._index = self
 	return self
 end
 
-function collision:handle_collisions(origin, speed)
+function collision:handle_collisions(origin, movement)
 	local offset = vmath.vector3()
-	local previous_ground_contact = self.ground_contact
-	local previous_wall_contact = self.wall_contact
-	local collide_down = false
-	self.ground_contact = false
-	self.wall_contact = nil
+	local previous_ground_contact = self.contact.d
+	self.contact.u = false
+	self.contact.d = false
+	self.contact.l = false
+	self.contact.r = false
 	
 	for id, ray in ipairs(self.rays) do
+		
 		local result = physics.raycast(origin + offset, origin + offset + ray, {hash("world")})
 		if result then
+			
 			local separation = ray * (1 - result.fraction)
 			--	Set slope data on collision object (to process when changing velocity and so on)
 			self.slope_left = id == RAY_CAST_DOWN_LEFT_ID and result.normal.x ~= 0 and result.normal.y ~= 0 and result.normal
 			self.slope_right = id == RAY_CAST_DOWN_RIGHT_ID and result.normal.x ~= 0 and result.normal.y ~= 0 and result.normal
+			-- slope for up left and up right corners of the raycasts
+			self.slope_upleft = id == RAY_CAST_UP_LEFT_ID and result.normal.x ~= 0 and result.normal.y ~= 0 and result.normal
+			self.slope_upright = id == RAY_CAST_UP_RIGHT_ID and result.normal.x ~= 0 and result.normal.y ~= 0 and result.normal
+			
 
-			if id == RAY_CAST_LEFT_ID then
-				self.wall_contact = -1
-			elseif id == RAY_CAST_RIGHT_ID then
-				self.wall_contact = 1
-			elseif id == RAY_CAST_DOWN_ID or id == RAY_CAST_DOWN_LEFT_ID or id == RAY_CAST_DOWN_RIGHT_ID then
-				if id == RAY_CAST_DOWN_ID then
-					self.slope_left = nil
-					self.slope_right = nil
-				end
+			if id == RAY_CAST_DOWN_ID or id == RAY_CAST_DOWN_LEFT_ID or id == RAY_CAST_DOWN_RIGHT_ID then
 				
-				if result.normal.y > 0.7 and speed.y <= 0 then
-					self.ground_contact = true
-					
-					if result.fraction < 0.6 then
-						self.ground_contact = false
-						separation.y = 0
-						separation.x = math.ceil(separation.x)
-						self.wall_contact = true
-					else
-						separation.x = 0
-					end
+				if result.normal.y > 0.7 and movement.speed.y <= 0 then
+					self.contact.d = true
+					separation.x = 0
 				elseif result.normal.x ~= 0 then
-					if self.wall_contact then
+					if self.contact.l or self.contact.r then
 						separation.x = 0
 						separation.y = 0
 					else
@@ -108,16 +104,22 @@ function collision:handle_collisions(origin, speed)
 					end
 				else
 					separation.y = 0
-					if result.fraction > 0.8 then
-						separation.x = 0
-					end
-					
+					separation.x = 0
 				end
 			elseif id == RAY_CAST_UP_ID or id == RAY_CAST_UP_LEFT_ID or id == RAY_CAST_UP_RIGHT_ID then
-				if result.normal.y < -0.7 then
-					speed.y = 0
+				
+				if result.normal.y < -0.7 then	
+					self.contact.u = true
+					if self.contact.l or self.contact.r or result.fraction < 0.6 then
+						if (movement.speed.x > 0 and separation.x > 0) or (movement.speed.x < 0 and separation.x < 0) then
+							separation.x = 0
+						end
+						
+						separation.y = 0
+					end
+					
 				elseif result.normal.x ~= 0 then
-					if self.wall_contact then
+					if self.contact.l or self.contact.r then
 						separation.x = 0
 						separation.y = 0
 					else
@@ -127,6 +129,9 @@ function collision:handle_collisions(origin, speed)
 					separation.x = 0
 					separation.y = 0
 				end
+			elseif id == RAY_CAST_LEFT_ID or id == RAY_CAST_RIGHT_ID then
+				self.contact.l = id == RAY_CAST_LEFT_ID
+				self.contact.r = id == RAY_CAST_RIGHT_ID
 			else
 				separation.x = 0
 				separation.y = 0
@@ -135,15 +140,20 @@ function collision:handle_collisions(origin, speed)
 		end
 	end
 
-	if not previous_ground_contact and self.ground_contact then
-		speed.x = 0
-		speed.y = 0
+	if not self.no_reset then
+		if	(self.contact.l and movement.speed.x < 0) or 
+		(self.contact.r and movement.speed.x > 0) then 
+			movement:update_horizontal_speed(0) 
+		end
+
+		if (self.contact.u and movement.speed.y > 0) or 
+		(not previous_ground_contact and self.contact.d and movement.speed.y < 0) then 
+			movement:update_vertical_speed(0) 
+		end
 	end
 
 	-- try to snap downwards
-	if self.do_snap and not self.ground_contact then
-		
-		
+	if self.do_snap and not self.contact.d then
 		local snap_left_vec = origin + offset + self.rays[RAY_CAST_DOWN_LEFT_ID]
 		local snap_right_vec = origin + offset + self.rays[RAY_CAST_DOWN_RIGHT_ID]
 
@@ -152,7 +162,8 @@ function collision:handle_collisions(origin, speed)
 		local separation
 		for _, snap in ipairs({snap_left_vec, snap_right_vec}) do
 			local result = physics.raycast(snap, snap + self.snap_length, {hash("world")})
-			if result then
+			
+			if result and result.fraction > 0.001 then
 				if snap_result == nil then
 					snap_result = result.position
 					separation = (self.snap_length) * (1 - result.fraction)
@@ -167,14 +178,16 @@ function collision:handle_collisions(origin, speed)
 		end
 
 		if snap_result ~= nil then
+			print(separation.y)
 			offset.y = offset.y + (self.snap_length.y - separation.y - 1)
-			self.ground_contact = true
+			self.contact.d = true
+			
 			print("snapped!")
 		end
 	end
 	
 	-- use a falling buffer, aka a bit of coyote time to handle slopes and stuff like that better
-	if self.ground_contact then
+	if self.contact.d then
 		self.falling_dur = 0
 	else
 		self.falling_dur = self.falling_dur + 1
@@ -185,8 +198,15 @@ function collision:handle_collisions(origin, speed)
 		self.slope_right = nil
 		msg.post("#", "is_falling")
 	end
-	
 	return offset
+end
+
+function collision:check_move_into_collision(movement_vector, ignore_ground)
+	if ignore_ground == nil then ignore_ground = false end
+	return (not ignore_ground and self.contact.d and movement_vector.y < 0) or 
+	(self.contact.u and movement_vector.y > 0) or 
+	(self.contact.l and movement_vector.x < 0) or
+	(self.contact.r and movement_vector.x > 0)
 end
 
 function collision:show_debug_rays(origin)

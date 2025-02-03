@@ -6,6 +6,10 @@ components {
   id: "level"
   component: "/main/world/level/level.script"
 }
+components {
+  id: "hitbox_factory"
+  component: "/main/actor/hitboxes/hitbox_factory.factory"
+}
 embedded_components {
   id: "collision_object"
   type: "collisionobject"
@@ -50,8 +54,8 @@ embedded_components {
   "mass: 0.0\n"
   "friction: 0.1\n"
   "restitution: 0.5\n"
-  "group: \"enemy_hurtbox\"\n"
-  "mask: \"player_hitbox\"\n"
+  "group: \"enemy_hitbox\"\n"
+  "mask: \"player_hurtbox\"\n"
   "embedded_collision_shape {\n"
   "  shapes {\n"
   "    shape_type: TYPE_BOX\n"

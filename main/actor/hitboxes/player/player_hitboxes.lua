@@ -41,10 +41,10 @@ hitboxes[hash("nground")] = {
 		{x_offset=-6, y_offset=-24, width=20, height=11, is_player=true},
 		{x_offset=16, y_offset=-18, width=18, height=24, is_player=true},
 		-- hit
-		{x_offset=18, y_offset=2, width=23, height=44, is_player=true, is_hitbox=true},
-		{x_offset=28, y_offset=4, width=20, height=40, is_player=true, is_hitbox=true},
-		{x_offset=38, y_offset=6, width=10, height=36, is_player=true, is_hitbox=true},
-		{x_offset=45, y_offset=9, width=8, height=30, is_player=true, is_hitbox=true},
+		{x_offset=18, y_offset=2, width=23, height=44, is_player=true, is_hitbox=true, is_clashable=true},
+		{x_offset=28, y_offset=4, width=20, height=40, is_player=true, is_hitbox=true, is_clashable=true},
+		{x_offset=38, y_offset=6, width=10, height=36, is_player=true, is_hitbox=true, is_clashable=true},
+		{x_offset=45, y_offset=9, width=8, height=30, is_player=true, is_hitbox=true, is_clashable=true},
 	},
 	[5] = {
 		-- hurt
@@ -54,9 +54,9 @@ hitboxes[hash("nground")] = {
 		{x_offset=-6, y_offset=-24, width=20, height=11, is_player=true},
 		{x_offset=16, y_offset=-18, width=18, height=24, is_player=true},
 		-- hit
-		{x_offset=13, y_offset=19, width=16, height=24, is_player=true, is_hitbox=true, duration=3},
-		{x_offset=32, y_offset=19, width=22, height=20, is_player=true, is_hitbox=true, duration=3},
-		{x_offset=47, y_offset=19, width=8, height=18, is_player=true, is_hitbox=true, duration=3},
+		{x_offset=13, y_offset=19, width=16, height=24, is_player=true, is_hitbox=true, is_clashable=true, duration=3},
+		{x_offset=32, y_offset=19, width=22, height=20, is_player=true, is_hitbox=true, is_clashable=true, duration=3},
+		{x_offset=47, y_offset=19, width=8, height=18, is_player=true, is_hitbox=true, is_clashable=true, duration=3},
 	}
 }
 

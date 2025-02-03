@@ -1,5 +1,5 @@
 components {
-  id: "hitbox_manager"
+  id: "hitbox_script"
   component: "/main/actor/hitboxes/hitbox.script"
 }
 embedded_components {
@@ -9,8 +9,7 @@ embedded_components {
   "mass: 0.0\n"
   "friction: 0.1\n"
   "restitution: 0.5\n"
-  "group: \"player_hurtbox\"\n"
-  "mask: \"enemy_hitbox\"\n"
+  "group: \"\"\n"
   "embedded_collision_shape {\n"
   "  shapes {\n"
   "    shape_type: TYPE_BOX\n"

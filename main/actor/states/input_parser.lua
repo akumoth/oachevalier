@@ -152,4 +152,25 @@ function M.filter_input(input, button_list) -- returns first found button from t
 	return nil
 end
 
+function M.dir_input_vector() -- returns last input as a normalized direction vector
+	local input = M.last_input()
+	local dir = vmath.vector3()
+	
+	if input == nil then return dir end
+
+	-- check if last input has directions, if not then return
+	local mask = check_button_array({hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+	if bit.band(input.buttons, mask) <= 0 then
+		return dir
+	end
+
+	-- positive directions (right, up) - negative directions (left, down) to get the normalized dir for both axis
+	dir.x = bit.band(input.buttons, input_mask[hash("moveRight")]) - bit.band(input.buttons, input_mask[hash("moveLeft")])
+	dir.y = bit.band(input.buttons, input_mask[hash("moveUp")]) - bit.band(input.buttons, input_mask[hash("moveDown")])
+
+	-- normalize dirs so their sum is 1
+	dir = vmath.normalize(dir)
+
+	return dir
+end
 return M
