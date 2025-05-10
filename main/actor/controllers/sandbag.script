@@ -1,0 +1,96 @@
+go.property("max_health", 100)
+-- THE FOLLOWING ARE SET THROUGH SCRIPTS, DO NOT MODIFY
+go.property("health", 100)
+go.property("weight", 1)
+go.property("speed", vmath.vector3())
+go.property("contact_l", false)
+go.property("contact_r", false)
+go.property("contact_u", false)
+go.property("contact_d", false)
+go.property("slope_down", vmath.vector3())
+
+local controller = require('main.actor.controller')
+
+local hitboxes = require('main.actor.hitboxes.enemies.sandbag')
+
+local collision
+local movement
+local hitboxman
+local fsm
+local states
+
+-- Debug health values.
+local max_health = 10000
+local health = max_health
+
+-- Actor controller functions.
+local inputs = {
+	-- Flip sprite/hitboxes if needed.
+	update_sprite = function ()
+		sprite.set_hflip("spr#spr", movement.facing_dir.x < 0)
+		hitboxman:flip()
+	end,
+	-- For the player, these depend on their current/past inputs.
+	-- For other actors, these should depend on a context-based node graph that activates them (think about this some more)
+	left = function ()
+	end,
+	right = function ()
+	end,
+	down = function ()
+	end,
+	do_jump = function ()
+	end,
+	-- Get tech direction when knocked down.
+	get_tech_dir = function ()
+		local arr = {hash("moveLeft"),hash("moveRight")}
+		return (arr[math.random(0, 1)])
+	end,
+	
+	-- Get direction for DI.
+	-- For non-player actors, this function should choose randomly.
+	get_influence_dir = function ()
+		return movement.cur_influence_dir or vmath.vector3()
+	end
+}
+
+function init(self)
+	-- Initialize controller
+
+	controller = controller.new({
+		collection = "sandbag",
+		hitboxes = hitboxes,
+		inputs = inputs,
+		states_table =  "BaseActor",
+		movement = {cur_influence_dir = vmath.vector3()},
+		col_group = {
+			hash("player_bound")
+		}
+	})
+
+	collision = controller.collision
+	movement = controller.movement
+	hitboxman = controller.hitboxman
+	fsm = controller.fsm
+	states = controller.states
+
+	fsm:add_callbacks(
+	{
+		onenterhitstunned = function (self, event, from, to)
+			movement.cur_influence_dir = vmath.vector3(math.random(-1,1),math.random(-1,1),0)
+		end,
+	})
+	-- Variable for storing time since the state began, in case the particular state ends on a timer or has time-sensitive actions
+	fsm.state_duration = 0
+end
+
+function update(self, dt)
+	msg.post("@render:", "draw_line", { start_point = go.get_world_position(), end_point = go.get_world_position() + movement.push, color = vmath.vector4(1, 0, 0, 1) })
+end
+
+function fixed_update(self, dt)
+	controller:update(dt)
+end
+
+function on_message(self, message_id, message, sender)
+	controller:on_message(message_id, message, sender)
+end

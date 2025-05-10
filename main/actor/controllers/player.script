@@ -1,0 +1,254 @@
+go.property("max_health", 100)
+-- THE FOLLOWING ARE SET THROUGH SCRIPTS, DO NOT MODIFY
+go.property("health", 100)
+go.property("weight", 1)
+go.property("speed", vmath.vector3())
+go.property("contact_l", false)
+go.property("contact_r", false)
+go.property("contact_u", false)
+go.property("contact_d", false)
+go.property("slope_down", vmath.vector3())
+
+local controller = require('main.actor.controller')
+
+-- import libraries and object types to use
+local input_parser = require('main.actor.states.player.input_parser')
+
+-- get table of player hitboxes (different types of actors will have to import different hitbox tables, wonder how i'll refactor that...)
+local hitboxes = require('main.actor.hitboxes.player.hitboxes')
+
+--_pre-initialize our controller components
+-- Collision handles raycasts + pushing away actor object position from walls and floors.
+-- Movement handles speed vector calc operations.
+-- FSM is our state machine,
+-- and 'states' defines a table in which we have callbacks for state enter, exit and update, as well as related values.
+
+-- Everything in the states table should be defined in another lua file, eventually...
+local collision
+local movement
+local hitboxman
+local fsm
+local states
+
+-- Debug health values.
+local max_health = 100
+local health = max_health
+
+-- Actor controller functions.
+local inputs = {
+	-- Flip sprite/hitboxes if needed.
+	update_sprite = function ()
+		sprite.set_hflip("spr#spr", movement.facing_dir.x < 0)
+		hitboxman:flip()
+	end,
+	-- For the player, these depend on their current/past inputs.
+	-- For other actors, these should depend on a context-based node graph that activates them (think about this some more)
+	left = function ()
+		return input_parser.check_input(hash("moveLeft"))
+	end,
+	right = function ()
+		return input_parser.check_input(hash("moveRight"))
+	end,
+	down = function ()
+		return input_parser.check_input(hash("moveDown"))
+	end,
+	do_foxtrot = function ()
+		return collision.contact.d and input_parser.check_step({hash("moveLeft"),hash("moveRight")})
+	end,
+	do_jump = function (ignore_contact)
+		return (collision.contact.d or ignore_contact) and input_parser.check_length(hash("jump"), 5)
+	end,
+	do_attack = function ()
+		return input_parser.check_length(hash("attack"), 5)
+	end,
+	do_airdash = function ()
+		return input_parser.check_step({hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+	end,
+	-- Since airdash is a tap, we need to get the last tapped direction to set the direction.
+	get_airdash_dir = function ()
+		local last_dir = input_parser.last_input({hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+		return input_parser.filter_input(last_dir, {hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+	end,
+
+	-- Get tech direction when knocked down.
+	get_tech_dir = function ()
+		local input = input_parser.last_input()
+		return input_parser.filter_input(input, {hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+	end,
+
+	get_attack = function (air)
+		if air == nil then air = false end
+
+		if air then
+			local sprite_anim = go.get("spr#spr", "animation")
+			if hitboxes[sprite_anim].extension then
+				return hitboxes[sprite_anim].extension
+			else
+				return hash("nair")
+			end
+		else
+			return hash("nground")
+		end
+	end,
+	
+	-- Get direction for DI.
+	-- For non-player actors, this function should choose randomly.
+	get_influence_dir = function ()
+		return input_parser.dir_input_vector()
+	end
+}
+
+
+-- Auxiliary function that automatically changes states if the incoming state has an event defined and the associated input has been issued.
+local function check_inputs()
+	if inputs.do_attack() and fsm.events.attack.map[fsm.current] and fsm.events.attack.map[fsm.current] == 'attacking' then
+		fsm:attack()
+	end
+	if inputs.do_foxtrot() and collision.contact.d and fsm.events.step.map[fsm.current] and fsm.events.step.map[fsm.current] == 'foxtrot' then
+		fsm:step()
+	end
+	if inputs.do_airdash() and fsm.state_duration == 0 and fsm.can_airdash and not collision.contact.d 
+		and fsm.events.airdash.map[fsm.current] and fsm.events.airdash.map[fsm.current] == 'airdashing' then
+		fsm:airdash()
+	end
+end
+
+function init(self)
+	-- Initialize controller
+	
+	controller = controller.new({
+		collection = "player",
+		hitboxes = hitboxes,
+		inputs = inputs,
+		states_table =  "PlayerActor",
+		movement = {
+			shorthop_speed=480,
+			step_speed = 350,
+			drift_speed = 130,
+			brake_speed = 50,
+			airdash_speed = 320
+		},
+		hitboxman = {
+			land_lag = 4
+		},
+		col_group = {
+			hash("enemy_bound")
+		}
+	})
+	
+	collision = controller.collision
+	movement = controller.movement
+	hitboxman = controller.hitboxman
+	fsm = controller.fsm
+	states = controller.states
+	
+	-- Add missing fsm transitions
+
+	fsm:add_events({
+		{ name = 'walk', from = 'foxtrot', to = 'walking' },
+		{ name = 'walk', from = 'airdashing', to = 'walking' },
+
+		{ name = 'step', from = 'idle', to = 'foxtrot' },
+		{ name = 'step', from = 'foxtrot', to = 'foxtrot' },
+		{ name = 'step', from = 'attacking', to = 'foxtrot' },
+		{ name = 'step', from = 'clashing', to = 'foxtrot' },
+		
+		{ name = 'jump', from = 'foxtrot', to = 'jumping' },
+
+		{ name = 'fall', from = 'foxtrot', to = 'falling' },
+		{ name = 'fall', from = 'airdashing', to = 'falling' },
+
+		{ name = 'airdash', from = 'falling', to = 'airdashing' },
+		{ name = 'airdash', from = 'attacking', to = 'airdashing' },
+
+		{ name = 'stop', from = 'foxtrot', to = 'idle' },
+		{ name = 'stop', from = 'airdashing', to = 'idle' },
+
+		{ name = 'attack', from = 'foxtrot', to = 'attacking' },
+		{ name = 'attack', from = 'airdashing', to = 'attacking' },
+
+		{ name = 'hitstun', from = 'foxtrot', to = 'hitstunned' },
+		{ name = 'hitstun', from = 'airdashing', to = 'hitstunned' },
+
+		{ name = 'crouch', from = 'foxtrot', to = 'crouching' },
+	})
+	
+	-- Add missing fsm callbacks
+	fsm.onleaveattacking_ = fsm.onleaveattacking
+	-- fsm.onstatechange_ = fsm.onstatechange
+	fsm:add_callbacks(
+	{
+		-- onstatechange = function (self, event, from, to)
+		-- 	fsm.onstatechange_(self, event, from, to)
+		-- 	print("entering " .. to .. ", leaving " .. from)
+		-- end,
+		onstop = function(self, event, from, to)
+			fsm.can_foxtrot = true
+			fsm.can_airdash = true
+		end,
+		onleavefoxtrot = function(self, event, from, to)
+			if to == 'foxtrot' and not (fsm.can_foxtrot and fsm.state_duration < 12) then
+				return false
+			else
+				return true
+			end
+		end,
+		onleaveattacking = function(self, event, from, to)
+			local cursor = go.get("spr#spr", "cursor")
+			local sprite_anim = go.get("spr#spr", "animation")
+
+			if (to == "airdashing" or to == "foxtrot") then
+				if hitboxman.state == 2 then
+					return true
+				else
+					return false
+				end
+			end
+
+			if cursor ~= 1.0 and ((to ~= 'clashing' and to ~= 'hitstunned') and not (states.attacking.vals.air and to ~= "falling")) then
+				return false
+			end
+
+			if to == "attacking" and not (hitboxman.can_extend and hitboxes[sprite_anim].extension) then
+				return false
+			end
+
+			return true
+		end,
+	})
+
+	controller.check_inputs_ = controller.check_inputs
+	controller.check_inputs = function (self)
+		check_inputs()
+		controller.check_inputs_(self)
+	end
+		
+	-- Variable for storing time since the state began, in case the particular state ends on a timer or has time-sensitive actions
+	fsm.state_duration = 0
+	fsm.can_airdash = true
+	fsm.can_foxtrot = true
+	
+	msg.post('.', 'acquire_input_focus')
+	msg.post("camera", "follow")
+end
+
+function update(self, dt)
+	local p = go.get_position()
+	msg.post("@render:", "draw_line", { start_point = go.get_world_position(), end_point = go.get_world_position() + movement.speed, color = vmath.vector4(1, 0, 0, 1) })
+	msg.post("@render:", "draw_debug_text", { text = "position: " .. tonumber(string.format("%.3f", p.x)) .. ", " .. tonumber(string.format("%.3f", p.y)), position = vmath.vector3(20, 200, 0), color = vmath.vector4(0, 1, 0, 1) })
+	msg.post("@render:", "draw_debug_text", { text = "speed: " .. tonumber(string.format("%.3f", movement.speed.x)) .. ", " .. tonumber(string.format("%.3f", movement.speed.y)), position = vmath.vector3(20, 220, 0), color = vmath.vector4(0, 1, 0, 1) })
+	
+end
+
+function fixed_update(self, dt)
+	input_parser.update_inputs()
+	controller:update(dt)
+end
+
+function on_input(self, action_id, action)
+	input_parser.receive_input(action_id, action)
+end
+
+function on_message(self, message_id, message, sender)
+	controller:on_message(message_id, message, sender)
+end

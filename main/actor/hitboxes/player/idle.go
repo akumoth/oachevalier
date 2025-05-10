@@ -1,3 +1,7 @@
+components {
+  id: "actor_sprite"
+  component: "/main/actor/sprites/actor_sprite.sprite"
+}
 embedded_components {
   id: "hurt1"
   type: "collisionobject"

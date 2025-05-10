@@ -106,4 +106,176 @@ animations {
     image: "/data/spr/debug/attacks/nground/jab6.png"
   }
 }
+animations {
+  id: "nair"
+  images {
+    image: "/data/spr/debug/attacks/nair/nair1.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair2.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair2.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair3.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair3.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair7.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair8.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair8.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair9.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair/nair11.png"
+  }
+}
+animations {
+  id: "nair_ext"
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext1.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext1.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext2.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext2.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext3.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext4.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext4.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext5.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext6.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext7.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext7.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext8.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext8.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext9.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext9.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext10.png"
+  }
+  images {
+    image: "/data/spr/debug/attacks/nair_ext/nairext10.png"
+  }
+}
+animations {
+  id: "landing"
+  images {
+    image: "/data/spr/debug/jump/jump3.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump3.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump2.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump2.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump1.png"
+  }
+}
+animations {
+  id: "stand_to_crouch"
+  images {
+    image: "/data/spr/debug/idle/idle.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump1.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump2.png"
+  }
+}
+animations {
+  id: "crouch"
+  images {
+    image: "/data/spr/debug/jump/jump2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "crouch_to_stand"
+  images {
+    image: "/data/spr/debug/jump/jump2.png"
+  }
+  images {
+    image: "/data/spr/debug/jump/jump1.png"
+  }
+  images {
+    image: "/data/spr/debug/idle/idle.png"
+  }
+}
 extrude_borders: 2

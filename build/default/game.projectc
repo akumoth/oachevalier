@@ -8,7 +8,7 @@ input_method = HiddenInputField
 manifest = /builtins/manifests/android/AndroidManifest.xml
 minimum_sdk_version = 19
 package = com.example.todo
-target_sdk_version = 34
+target_sdk_version = 35
 version_code = 1
 
 [bootstrap]
@@ -78,6 +78,7 @@ set_custom_heap_size = 0
 show_console_banner = 1
 show_fullscreen_button = 1
 show_made_with_defold = 1
+transparent_graphics_context = 0
 wasm_streaming = 0
 
 [input]
@@ -108,6 +109,8 @@ settings = /liveupdate.settings
 max_count = 128
 
 [model]
+max_bone_matrix_texture_height = 1024
+max_bone_matrix_texture_width = 1024
 max_count = 128
 split_meshes = 0
 
@@ -133,7 +136,7 @@ max_particle_count = 1024
 [physics]
 allow_dynamic_transforms = 1
 contact_impulse_limit = 0.0
-debug = 1
+debug = 0
 debug_alpha = 0.9
 debug_scale = 30.0
 gravity_x = 0.0
@@ -148,7 +151,7 @@ ray_cast_limit_3d = 128
 scale = 1.0
 trigger_overlap_capacity = 16
 type = 2D
-use_fixed_timestep = 0
+use_fixed_timestep = 1
 velocity_threshold = 1.0
 world_count = 4
 
@@ -186,6 +189,7 @@ max_sound_buffers = 32
 max_sound_data = 128
 max_sound_instances = 256
 max_sound_sources = 16
+sample_frame_count = 0
 use_thread = 1
 
 [sprite]

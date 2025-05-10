@@ -81,6 +81,21 @@ local function add_to_map(map, event)
 	end
 end
 
+function machine.add_callbacks(fsm, callbacks)
+	for name, callback in pairs(callbacks or {}) do
+		fsm[name] = callback
+	end
+end
+
+function machine.add_events(fsm, events)
+	for _, event in ipairs(events or {}) do
+		local name = event.name
+		fsm[name] = fsm[name] or create_transition(name)
+		fsm.events[name] = fsm.events[name] or { map = {} }
+		add_to_map(fsm.events[name].map, event)
+	end
+end
+
 function machine.create(options)
 	assert(options.events)
 
@@ -92,19 +107,13 @@ function machine.create(options)
 	fsm.asyncState = NONE
 	fsm.events = {}
 
-	for _, event in ipairs(options.events or {}) do
-		local name = event.name
-		fsm[name] = fsm[name] or create_transition(name)
-		fsm.events[name] = fsm.events[name] or { map = {} }
-		add_to_map(fsm.events[name].map, event)
-	end
-
-	for name, callback in pairs(options.callbacks or {}) do
-		fsm[name] = callback
-	end
+	machine.add_events(fsm, options.events)
+	machine.add_callbacks(fsm, options.callbacks)
 
 	return fsm
 end
+
+
 
 function machine:is(state)
 	return self.current == state

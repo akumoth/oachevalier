@@ -1,0 +1,15 @@
+name: "player"
+instances {
+  id: "sandbag"
+  prototype: "/main/actor/game_objects/sandbag.go"
+  children: "spr"
+}
+scale_along_z: 0
+embedded_instances {
+  id: "spr"
+  data: "components {\n"
+  "  id: \"spr\"\n"
+  "  component: \"/main/actor/sprites/sandbag.sprite\"\n"
+  "}\n"
+  ""
+}

@@ -1,14 +1,22 @@
 name: "main"
 instances {
-  id: "debug_level"
+  id: "level"
   prototype: "/main/world/level/debug_level.go"
 }
 collection_instances {
   id: "player"
-  collection: "/main/actor/player.collection"
+  collection: "/main/actor/game_objects/player.collection"
   position {
     x: 116.0
     y: 140.0
+  }
+}
+collection_instances {
+  id: "sandbag"
+  collection: "/main/actor/game_objects/sandbag.collection"
+  position {
+    x: 490.0
+    y: 84.0
   }
 }
 scale_along_z: 0

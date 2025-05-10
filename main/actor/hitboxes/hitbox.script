@@ -7,12 +7,21 @@ go.property("height", 10)
 go.property("is_player", false)
 go.property("is_hitbox", false)
 go.property("is_clashable", false)
+go.property("is_collision", false)
 go.property("damage", 0)
+go.property("knockdown", false)
 go.property("knockback", 0)
 go.property("knockback_angle", 0)
 go.property("parent", msg.url())
 go.property("duration", -1)
 go.property("flip", false)
+
+local ignore_collision
+
+-- Hitstun is equal to knockback units * a fixed hitstun modifier, which for now is 0.4x because that's how it was in Melee.
+
+local hitstun_modifier = 0.5
+local knockback_modifier = 10
 
 function init(self)
 	go.set_parent(nil, self.parent, true)
@@ -41,10 +50,15 @@ function init(self)
 		if self.is_clashable then
 			physics.set_maskbit("#hitbox", other_prefix .. "hitbox", true)
 		end
+		if self.is_collision then
+			physics.set_maskbit("#hitbox", "world", true)
+		end
 	else
 		physics.set_group("#hitbox", self_prefix .. "hurtbox" )
 		physics.set_maskbit("#hitbox", other_prefix .. "hitbox", true)
 	end
+
+	ignore_collision = false
 end
 
 function fixed_update(self, dt)
@@ -61,17 +75,29 @@ end
 function on_message(self, message_id, message, sender)
 	if message_id == hash("trigger_response") then
 		local scr_url = msg.url(nil, message.other_id, "hitbox_script")
-		
-		if go.get(scr_url, "is_hitbox") and not self.is_hitbox then
+		if message.other_group == hash("world")  then
+			if not ignore_collision then
+				msg.post(self.parent, "received_hitcollision", {
+					knockback = self.knockback,
+					angle = self.knockback_angle,
+					flip = self.x_offset > 0
+				})
+				ignore_collision = true
+			else return end
+		elseif go.get(scr_url, "is_hitbox") and not self.is_hitbox then
 			msg.post(self.parent, "received_hitbox", {
 				hitbox_parent = go.get(scr_url, "parent"),
-				knockback = go.get(scr_url, "knockback"),
+				knockback = go.get(scr_url, "knockback")*knockback_modifier,
+				knockdown = go.get(scr_url, "knockdown"),
+				hitstun = go.get(scr_url, "knockback")*hitstun_modifier,
 				angle = go.get(scr_url, "knockback_angle"),
 				damage = go.get(scr_url, "damage")
 			})	
 		elseif go.get(scr_url, "is_hitbox") and self.is_clashable then
 			msg.post(self.parent, "received_clash", {
 				hitbox_parent = go.get(scr_url, "parent"),
+				self_knockback = self.knockback,
+				other_knockback = go.get(scr_url, "knockback"),
 				flip = go.get(scr_url, "flip")
 			})	
 		end

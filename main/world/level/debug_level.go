@@ -20,6 +20,8 @@ embedded_components {
   "restitution: 0.5\n"
   "group: \"world\"\n"
   "mask: \"actor\"\n"
+  "mask: \"player_hitbox\"\n"
+  "mask: \"enemy_hitbox\"\n"
   ""
 }
 embedded_components {

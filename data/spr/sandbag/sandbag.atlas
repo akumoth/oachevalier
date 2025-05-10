@@ -1,0 +1,49 @@
+animations {
+  id: "idle"
+  images {
+    image: "/data/spr/sandbag/idle.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "hitstunned"
+  images {
+    image: "/data/spr/sandbag/hitstunned1.png"
+  }
+  images {
+    image: "/data/spr/sandbag/hitstunned2.png"
+  }
+  images {
+    image: "/data/spr/sandbag/hitstunned3.png"
+  }
+  images {
+    image: "/data/spr/sandbag/hitstunned4.png"
+  }
+  images {
+    image: "/data/spr/sandbag/hitstunned5.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 20
+}
+animations {
+  id: "tech"
+  images {
+    image: "/data/spr/sandbag/tech.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "air"
+  images {
+    image: "/data/spr/sandbag/air.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+animations {
+  id: "landing"
+  images {
+    image: "/data/spr/sandbag/tech.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+extrude_borders: 2

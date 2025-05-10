@@ -1,22 +1,42 @@
+-- 
+-- local test_hitbox = {
+-- 	x_offset=505,
+-- 	y_offset=60,
+-- 	width=20,
+-- 	height=20,
+-- 	is_hitbox=true,
+-- 	is_clashable=true,
+-- 	damage=20,
+-- 	knockback=80,
+-- 	knockback_angle=90,
+-- 	knockdown=true
+-- }
+-- 
+-- local hitbox_id
 
-local test_hitbox = {
-	x_offset=545,
-	y_offset=100,
-	width=20,
-	height=20,
-	is_hitbox=true,
-	is_clashable=true,
-	damage=20,
-	knockback=150,
-	knockback_angle=330
-}
-
-local hitbox_id
+local controllers = {}
 
 function init(self)
 	msg.post("#", "run_after_init")
-	test_hitbox.parent = msg.url()
-	hitbox_id = factory.create("#hitbox_factory", nil, nil, test_hitbox)
+	-- test_hitbox.parent = msg.url()
+	-- hitbox_id = factory.create("#hitbox_factory", nil, nil, test_hitbox)
 	local x, y, w, h = tilemap.get_bounds("#tiles")
 	msg.post("player/camera", "define_bounds", { width = w, height = h } )
+end
+
+function on_message(self, message_id, message, sender)
+	if (message_id == hash("controller_init")) then
+		controllers[#controllers + 1] = sender.path
+	end
+
+	if (message_id == hash("controller_hitbox_reset")) then
+		for _, con in ipairs(controllers) do
+			
+			msg.post(con, "controller_reset_sender_ignore", {
+				controller = sender.path,
+				controller_url = sender
+			})	
+		end
+	end
+	
 end
