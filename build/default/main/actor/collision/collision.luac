@@ -1,6 +1,6 @@
 
- I
-øHlocal class = require('main.utils.class')
+ÒL
+ªLlocal class = require('main.utils.class')
 local hmath = require('main.utils.hmath')
 
 local collision = class.new_class({})
@@ -62,6 +62,8 @@ function collision.new(bounding_box, actor_collision_group)
 	data.slope_up = nil
 
 	data.col_group = actor_collision_group or {}
+
+	data.push = true
 	
 	local self = setmetatable(data, collision)
 	self._index = self
@@ -258,17 +260,22 @@ function collision:check_push(movement)
 		if result then
 			local dir = (id == 1 and 1 or -1)
 			if id > 2 then dir = (result.fraction < 0.5 and 1 or -1) end
-			msg.post(msg.url(nil, result.id, "controller"), "collision_push", {
-				direction = dir,
-				fraction = result.fraction
-			})
 
-			local other_slope = go.get(msg.url(nil, result.id, "controller"), "slope_down")
-			
-			movement:set_push(vmath.vector3(
-				movement.pusher_speed.x * (1-result.fraction) * -dir, 0, 0),
-				other_slope ~= vmath.vector3() and other_slope)
-			return true
+			local push = go.get(msg.url(nil, result.id, "controller"), "push")
+
+			if push then
+				msg.post(msg.url(nil, result.id, "controller"), "collision_push", {
+					direction = dir,
+					fraction = result.fraction
+				})
+
+				local other_slope = go.get(msg.url(nil, result.id, "controller"), "slope_down")
+				
+				movement:set_push(vmath.vector3(
+					movement.pusher_speed.x * (1-result.fraction) * -dir, 0, 0),
+					other_slope ~= vmath.vector3() and other_slope)
+				return true
+			end
 		end
 	end
 	
@@ -306,11 +313,18 @@ function collision:update_position(dt, movement, debug)
 		
 		go.set_position(p + (distance*i)/steps + offset)
 
-		if self.check_move_into_collision(self, movement.speed, true) then
+		if self:check_move_into_collision(movement.speed, true) then
 			break
 		end
 		
 	end
+end
+
+function collision:check_close_to_ground(origin, distance)
+	if distance == nil then distance = 30 end
+	local distance_v = vmath.vector3(0,-distance,0)
+	local result = physics.raycast(origin + self.rays[RAY_CAST_DOWN_ID], origin + self.rays[RAY_CAST_DOWN_ID] + distance_v, {hash("world")})
+	return result ~= nil
 end
 
 return collision#@main/actor/collision/collision.luamain.utils.classmain.utils.hmath/main/utils/class.luac/main/utils/hmath.luac" 

@@ -7,6 +7,9 @@ function jumping.new(movement, collision, inputs, fsm)
 	local jumping_state = state({
 		name = 'jumping',
 		enter = function(self, from)
+			inputs.erase_buffer({"jump"})
+			
+			collision.push = true
 			if from == 'foxtrot' then
 				if math.abs(movement.speed.x) <= movement.brake_speed then
 					movement.speed.x = 0
@@ -23,7 +26,7 @@ function jumping.new(movement, collision, inputs, fsm)
 			movement:update_vertical_speed(self.vals.speed)
 		end,
 		update = function(self, dt)
-			if not inputs.do_jump() then
+			if not inputs.check_jumping() then
 				self.vals.speed = movement.shorthop_speed
 			end
 

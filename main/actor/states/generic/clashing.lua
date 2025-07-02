@@ -7,6 +7,8 @@ function clashing.new(movement, collision, inputs, fsm)
 	local clashing_state = state({
 		name = 'clashing',
 		enter = function (self, from) 
+			collision.push = true
+			
 			movement:reset_speed()
 			if not self.vals.flip then
 				self.vals.knockback = self.vals.knockback * -1

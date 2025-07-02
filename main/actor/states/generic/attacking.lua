@@ -7,33 +7,42 @@ function attacking.new(movement, collision, inputs, fsm, hitboxman)
 	local attacking_state = state({
 		name = 'attacking',
 		enter = function (self, from)
+			msg.post("/level#level", "controller_hitbox_reset")
+			
+			inputs.erase_buffer({"attack_left","attack_right","attack_up","attack_down","attack_n"})
+
 			if from=="falling" or from=="airdashing" then
+				fsm.can_airdash = false
 				self.vals.air = true
+			else
+				fsm.can_foxtrot = false
 			end
+			
 			sprite.play_flipbook("spr#spr", inputs.get_attack(self.vals.air))
 			
 			if from ~= 'foxtrot' and from ~= "falling" and from ~= "airdashing" and from ~= "attacking" then
 				movement:reset_speed()
 				movement:update_vertical_speed(movement.slope_suck)
 			end
+
+			
 			hitboxman.ignore_hitcollision = false
 
 			local last_xspeed = movement.speed.x
 			if self.vals.air then
-				self.vals.max_xspeed[1] = math.abs(last_xspeed) + movement.drift_speed
-				self.vals.max_xspeed[2] = math.abs(last_xspeed) - movement.drift_speed
-				if movement.speed.x ~= 0 then
+				self.vals.max_xspeed[1] = movement.drift_speed
+				self.vals.max_xspeed[2] = -movement.drift_speed
+				if math.abs(movement.speed.x) > movement.drift_speed then
 					self.vals.max_xspeed[1] = math.abs(last_xspeed)
-					self.vals.max_xspeed[2] = math.max(math.abs(last_xspeed) - movement.drift_speed, 10)
 				end
+			else
+				collision.push = true
 			end
 		end,
 		exit = function (self, to) 
 			if to ~= "attacking" or collision.contact.d then 
 				self.vals.air = false
 			end
-			print("leaving")
-			msg.post("/level#level", "controller_hitbox_reset")
 		end,
 		update = function (self, dt)
 			local slope = collision.slope_down or collision.slope_up

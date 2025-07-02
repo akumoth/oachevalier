@@ -8,11 +8,12 @@ go.property("contact_r", false)
 go.property("contact_u", false)
 go.property("contact_d", false)
 go.property("slope_down", vmath.vector3())
+go.property("push", true)
 
 local controller = require('main.actor.controller')
 
 -- import libraries and object types to use
-local input_parser = require('main.actor.states.player.input_parser')
+local input_parser = require('main.actor.states.inputs.input_parser')
 
 -- get table of player hitboxes (different types of actors will have to import different hitbox tables, wonder how i'll refactor that...)
 local hitboxes = require('main.actor.hitboxes.player.hitboxes')
@@ -52,17 +53,33 @@ local inputs = {
 	down = function ()
 		return input_parser.check_input(hash("moveDown"))
 	end,
+	-- used to separate shorthops and fullhops
+	check_jumping = function()
+		return input_parser.check_input(hash("jump"))
+	end,
 	do_foxtrot = function ()
-		return collision.contact.d and input_parser.check_step({hash("moveLeft"),hash("moveRight")})
+		if not collision.contact.d or #input_parser.buffer == 0 then return end
+		if input_parser.buffer[1].name == "tap_left" or input_parser.buffer[1].name == "tap_right" then
+			return true
+		end
 	end,
 	do_jump = function (ignore_contact)
-		return (collision.contact.d or ignore_contact) and input_parser.check_length(hash("jump"), 5)
+		if not (collision.contact.d or ignore_contact) or #input_parser.buffer == 0 then return end
+		if input_parser.buffer[1].name == "jump" then
+			return true
+		end
 	end,
 	do_attack = function ()
-		return input_parser.check_length(hash("attack"), 5)
+		if #input_parser.buffer == 0 then return end
+		if string.find(input_parser.buffer[1].name, "attack") then
+			return true
+		end
 	end,
 	do_airdash = function ()
-		return input_parser.check_step({hash("moveLeft"),hash("moveRight"),hash("moveUp"),hash("moveDown")})
+		if collision.contact.d or #input_parser.buffer == 0 then return end
+		if string.find(input_parser.buffer[1].name, "tap") then
+			return true
+		end
 	end,
 	-- Since airdash is a tap, we need to get the last tapped direction to set the direction.
 	get_airdash_dir = function ()
@@ -95,6 +112,19 @@ local inputs = {
 	-- For non-player actors, this function should choose randomly.
 	get_influence_dir = function ()
 		return input_parser.dir_input_vector()
+	end,
+
+	erase_buffer = function(name)
+		if type(name) == "table" then
+			for _, v in ipairs(name) do
+				if #input_parser.buffer ~= 0 and input_parser.buffer[1].name == name then
+					table.remove(input_parser.buffer, 1)
+					break
+				end
+			end
+		elseif #input_parser.buffer ~= 0 and input_parser.buffer[1].name == name then
+			table.remove(input_parser.buffer, 1)
+		end
 	end
 }
 
@@ -104,10 +134,10 @@ local function check_inputs()
 	if inputs.do_attack() and fsm.events.attack.map[fsm.current] and fsm.events.attack.map[fsm.current] == 'attacking' then
 		fsm:attack()
 	end
-	if inputs.do_foxtrot() and collision.contact.d and fsm.events.step.map[fsm.current] and fsm.events.step.map[fsm.current] == 'foxtrot' then
+	if inputs.do_foxtrot() and collision.contact.d and fsm.can_foxtrot and fsm.events.step.map[fsm.current] and fsm.events.step.map[fsm.current] == 'foxtrot' then
 		fsm:step()
 	end
-	if inputs.do_airdash() and fsm.state_duration == 0 and fsm.can_airdash and not collision.contact.d 
+	if inputs.do_airdash() and (not collision:check_close_to_ground(vmath.vector3(go.get_world_position()),5)) and fsm.can_airdash and not collision.contact.d 
 		and fsm.events.airdash.map[fsm.current] and fsm.events.airdash.map[fsm.current] == 'airdashing' then
 		fsm:airdash()
 	end
@@ -126,7 +156,7 @@ function init(self)
 			step_speed = 350,
 			drift_speed = 130,
 			brake_speed = 50,
-			airdash_speed = 320
+			airdash_speed = 280
 		},
 		hitboxman = {
 			land_lag = 4
@@ -161,6 +191,8 @@ function init(self)
 		{ name = 'airdash', from = 'falling', to = 'airdashing' },
 		{ name = 'airdash', from = 'attacking', to = 'airdashing' },
 
+		{ name = 'land', from = 'airdashing', to = 'landing' },
+		
 		{ name = 'stop', from = 'foxtrot', to = 'idle' },
 		{ name = 'stop', from = 'airdashing', to = 'idle' },
 
@@ -175,15 +207,19 @@ function init(self)
 	
 	-- Add missing fsm callbacks
 	fsm.onleaveattacking_ = fsm.onleaveattacking
-	-- fsm.onstatechange_ = fsm.onstatechange
+	fsm.onstatechange_ = fsm.onstatechange
 	fsm:add_callbacks(
 	{
-		-- onstatechange = function (self, event, from, to)
-		-- 	fsm.onstatechange_(self, event, from, to)
-		-- 	print("entering " .. to .. ", leaving " .. from)
-		-- end,
+		onstatechange = function (self, event, from, to)
+			fsm.onstatechange_(self, event, from, to)
+			print("entering " .. to .. ", leaving " .. from)
+		end,
 		onstop = function(self, event, from, to)
+			fsm.on_hit_foxtrot = false
 			fsm.can_foxtrot = true
+		end,
+		onland = function(self, event, from, to)
+			fsm.on_hit_airdash = false
 			fsm.can_airdash = true
 		end,
 		onleavefoxtrot = function(self, event, from, to)
@@ -250,5 +286,18 @@ function on_input(self, action_id, action)
 end
 
 function on_message(self, message_id, message, sender)
+	if message_id == hash("attack_connected") then
+		if collision.contact.d and not fsm.on_hit_foxtrot then
+			fsm.on_hit_foxtrot = true
+			fsm.can_foxtrot = true
+		end
+		
+		if not collision.contact.d and not fsm.on_hit_airdash then
+			fsm.on_hit_airdash = true
+			fsm.can_airdash = true
+		end
+		
+	end
+
 	controller:on_message(message_id, message, sender)
 end

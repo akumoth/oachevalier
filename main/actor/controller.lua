@@ -91,13 +91,31 @@ local function init_states(data)
 			-- { name = 'crouch', from = 'foxtrot', to = 'crouching' },
 		},
 		callbacks = {
-			-- onstop = function(self, event, from, to)
-			-- 	fsm.can_foxtrot = true
-			-- 	fsm.can_airdash = true
-			-- end,
 			onleavehitstunned = function(self, event, from, to)
+				-- Keep track of amounts of hits we've taken before reaching a state other than hitstunned
+				if to == "teching" then
+					data.states.hitstunned.vals.hit_counter = 0
+					data.states.hitstunned.vals.knockdown = false
+					return true
+				end
+				
+				if to ~= "hitstunned" then
+					if (
+						(data.inputs.do_jump()) and 
+						(not data.collision.d and not data.collision:check_close_to_ground(vmath.vector3(go.get_world_position())))
+						) then
+						data.states.hitstunned.vals.hit_counter = 0
+						data.fsm:tech()
+						return false
+					end
+					data.states.hitstunned.vals.hit_counter = 0
+				else
+					data.states.hitstunned.vals.hit_counter = data.states.hitstunned.vals.hit_counter + 1
+				end
+				
 				if data.states.hitstunned.vals.knockdown then 
-					if to == "knockdown" or to == "teching" then
+					if to == "knockdown" then
+						data.states.hitstunned.vals.knockdown = false
 						return true
 					end
 					return false
@@ -111,18 +129,12 @@ local function init_states(data)
 			end,
 			onleaveteching = function(self, event, from, to)
 				if data.fsm.state_duration < 1 then
+					data.states.teching.vals.teched = false
 					return true
 				else
 					return false
 				end
 			end,
-			-- onleavefoxtrot = function(self, event, from, to)
-			-- 	if to == 'foxtrot' and not (fsm.can_foxtrot and fsm.state_duration < 12) then
-			-- 		return false
-			-- 	else
-			-- 		return true
-			-- 	end
-			-- end,
 			onleaveclashing = function(self, event, from, to)
 				if (to == 'foxtrot' or to == 'jumping') and data.fsm.state_duration > 16 then
 					return false
@@ -168,8 +180,6 @@ local function init_states(data)
 
 	-- Variable for storing time since the state began, in case the particular state ends on a timer or has time-sensitive actions
 	data.fsm.state_duration = 0
-	-- fsm.can_airdash = true
-	-- fsm.can_foxtrot = true
 end
 
 function controller.new(_data)
@@ -266,6 +276,7 @@ function controller:update(dt, debug)
 	go.set(msg.url(), "contact_r", self.collision.contact.r)
 	go.set(msg.url(), "contact_u", self.collision.contact.u)
 	go.set(msg.url(), "contact_d", self.collision.contact.d)
+	go.set(msg.url(), "push", self.collision.push)
 	if self.collision.slope_down then go.set(msg.url(), "slope_down", self.collision.slope_down) end
 	
 	self.collision:update_position(dt, self.movement, debug)
@@ -307,15 +318,17 @@ function controller:on_message(message_id, message, sender)
 	end
 	
 	if message_id == hash("controller_reset_sender_ignore") and message.controller and self.hitboxman.ignore_senders[message.controller] then
+		print("resetting")
 		self.hitboxman.ignore_senders[message.controller] = nil
 	end
 
 	if	message_id == hash("collision_push") and 
 		self.collision.contact.d and 
-		self.fsm.current ~= "foxtrot" then
+		self.fsm.current ~= "foxtrot" and
+		self.fsm.current ~= "teching" then
 		self.movement:set_push(vmath.vector3(self.movement.pushed_speed.x * message.direction * (1-message.fraction), 0, 0))
 	end
-	
+
 	if message_id == hash("is_falling") and not self.collision.contact.d and self.fsm.current ~= "jumping" 
 		and self.fsm.current ~= "falling" and self.fsm.current ~= "airdashing" and self.fsm.current ~= "hitstunned" then
 		self.fsm:fall()

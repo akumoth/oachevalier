@@ -26,14 +26,15 @@ function movement.new(_data)
 		
 		shorthop_speed = _data.shorthop_speed or 500,
 		side_tech_speed = _data.side_tech_speed or 230,
-		up_tech_speed = _data.up_tech_speed or 480,
+		up_tech_speed = _data.up_tech_speed or 528,
 		
-		tech_angle = _data.tech_angle or 60,
+		tech_angle = _data.tech_angle or 70,
 
-		neutral_tech_time = _data.neutral_tech_time or 26,
-		side_tech_time = _data.side_tech_time or 42,
-		up_tech_time = _data.up_tech_time or _data.neutral_tech_time or 26,
-
+		neutral_tech_time = _data.neutral_tech_time or 22,
+		side_tech_time = _data.side_tech_time or 34,
+		up_tech_time = _data.up_tech_time or _data.neutral_tech_time or 22,
+		air_tech_time = _data.air_tech_time or 12,
+		
 		pusher_speed = vmath.vector3(160, 0, 0),
 		pushed_speed = vmath.vector3(160, 0, 0),
 		

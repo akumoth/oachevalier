@@ -5,7 +5,7 @@ instances {
 }
 collection_instances {
   id: "player"
-  collection: "/main/actor/game_objects/player.collection"
+  collection: "/main/actor/hitboxes/game_objects/player.collection"
   position {
     x: 116.0
     y: 140.0
@@ -13,7 +13,7 @@ collection_instances {
 }
 collection_instances {
   id: "sandbag"
-  collection: "/main/actor/game_objects/sandbag.collection"
+  collection: "/main/actor/hitboxes/game_objects/sandbag.collection"
   position {
     x: 490.0
     y: 84.0

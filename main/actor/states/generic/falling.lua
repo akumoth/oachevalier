@@ -9,6 +9,7 @@ function falling.new(movement, collision, inputs, fsm)
 		enter = function(self, from)
 			sprite.play_flipbook("spr#spr", hash("air"))
 			collision.do_snap = false
+			collision.push = false
 
 			if from == 'hitstunned' then
 				movement:update_horizontal_speed(math.min(movement.speed.x, movement.walk_speed))
@@ -18,10 +19,9 @@ function falling.new(movement, collision, inputs, fsm)
 
 			local last_xspeed = movement.speed.x
 			self.vals.max_xspeed[1] = math.abs(last_xspeed) + movement.drift_speed
-			self.vals.max_xspeed[2] = math.abs(last_xspeed) - movement.drift_speed
-			if movement.speed.x ~= 0 then
+			self.vals.max_xspeed[2] = -movement.drift_speed
+			if math.abs(movement.speed.x) > movement.drift_speed then
 				self.vals.max_xspeed[1] = math.abs(last_xspeed)
-				self.vals.max_xspeed[2] = math.max(math.abs(last_xspeed) - movement.drift_speed, 10)
 			end
 		end,
 		exit = function(self, to) 
@@ -31,7 +31,7 @@ function falling.new(movement, collision, inputs, fsm)
 			if collision.contact.d then
 				fsm:land()
 			end
-
+			
 			if movement.speed.y < 100 then
 				if movement.move_dir.x ~= 0 then
 					local fall_xspeed = movement.speed.x + (600 * movement.move_dir.x * dt)
@@ -43,11 +43,8 @@ function falling.new(movement, collision, inputs, fsm)
 				end
 			end
 
-			if fsm.state_duration == 0 and fsm.can_airdash and inputs.do_airdash() then
-				fsm:airdash()
-			end
-
 			movement:apply_gravity()
+			
 		end,
 		vals = {
 			max_xspeed = {0, 0}

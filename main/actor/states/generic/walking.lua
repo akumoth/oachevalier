@@ -9,7 +9,10 @@ function walking.new(movement, collision, inputs, fsm)
 		name = 'walking',
 		enter = function() 
 			sprite.play_flipbook("spr#spr", hash("walk"))
+			
+			collision.push = true
 			collision.do_snap = true
+			
 			movement:update_vertical_speed(movement.slope_suck)
 		end,
 		exit = function()

@@ -7,10 +7,12 @@ function knockdown.new(movement, collision, inputs, fsm, hitboxman)
 	local knockdown_state = state({
 		name = 'knockdown',
 		enter = function (self, from)
+			collision.push = true
+			
 			hitboxman:reset()
 			hitboxman.ignore_update = true
 			
-			fsm.state_duration = 10
+			fsm.state_duration = 25
 		end,
 		exit = function (self, to) 
 			if to ~= "teching" then hitboxman.ignore_update = false end
@@ -19,6 +21,8 @@ function knockdown.new(movement, collision, inputs, fsm, hitboxman)
 			if movement.speed.x ~= 0 then
 				movement:update_horizontal_speed(0)
 			end
+
+			collision:check_push(movement)
 			
 			if not collision.contact.d then 
 				movement:apply_gravity()

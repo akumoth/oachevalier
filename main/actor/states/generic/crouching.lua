@@ -8,6 +8,8 @@ function crouching.new(movement, collision, inputs, fsm)
 	{
 		name = 'crouching',
 		enter = function(self, from)
+			collision.push = true
+			
 			-- Eventually, the calls to change the current sprite animation should be done by the
 			-- state machine (barring idk, attack state) once there is an animation for each one
 			

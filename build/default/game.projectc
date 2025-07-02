@@ -136,7 +136,7 @@ max_particle_count = 1024
 [physics]
 allow_dynamic_transforms = 1
 contact_impulse_limit = 0.0
-debug = 0
+debug = 1
 debug_alpha = 0.9
 debug_scale = 30.0
 gravity_x = 0.0
@@ -156,6 +156,7 @@ velocity_threshold = 1.0
 world_count = 4
 
 [profiler]
+enabled = 1
 sleep_between_server_updates = 0
 track_cpu = 0
 
@@ -190,6 +191,11 @@ max_sound_data = 128
 max_sound_instances = 256
 max_sound_sources = 16
 sample_frame_count = 0
+stream_cache_size = 2097152
+stream_chunk_size = 16384
+stream_enabled = 0
+stream_preload_size = 16384
+use_linear_gain = 1
 use_thread = 1
 
 [sprite]

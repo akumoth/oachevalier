@@ -72,7 +72,7 @@ function fixed_update(self, dt)
 	
 end
 
-function on_message(self, message_id, message, sender)
+function on_message(self, message_id, message, sender)	
 	if message_id == hash("trigger_response") then
 		local scr_url = msg.url(nil, message.other_id, "hitbox_script")
 		if message.other_group == hash("world")  then
@@ -92,7 +92,9 @@ function on_message(self, message_id, message, sender)
 				hitstun = go.get(scr_url, "knockback")*hitstun_modifier,
 				angle = go.get(scr_url, "knockback_angle"),
 				damage = go.get(scr_url, "damage")
-			})	
+			})
+			
+			msg.post(go.get(scr_url, "parent"), "attack_connected")
 		elseif go.get(scr_url, "is_hitbox") and self.is_clashable then
 			msg.post(self.parent, "received_clash", {
 				hitbox_parent = go.get(scr_url, "parent"),

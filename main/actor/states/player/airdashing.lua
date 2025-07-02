@@ -7,27 +7,29 @@ function airdashing.new(movement, collision, inputs, fsm)
 	local airdashing_state = state({
 		name = 'airdashing',
 		enter = function (self, from)
+			inputs.erase_buffer({"tap_left","tap_right","tap_up","tap_down"})
+			
 			sprite.play_flipbook("spr#spr", hash("air"))
 			self.vals.dir = inputs.get_airdash_dir()
 			fsm.can_airdash = false
 
 			movement.ignore_gravity = true
 			collision.no_reset = true
-			movement:update_horizontal_speed(0)
-			movement:update_vertical_speed(0)
+			movement:reset_speed()
+
 			fsm.state_duration = 35
 
 			local penalty = 0
-
+			
 			if self.vals.dir == hash("moveLeft") then
-				if movement.facing_dir.x == 1 then penalty = 110 end
+				if movement.facing_dir.x == 1 then penalty = 90 end
 				movement:update_horizontal_speed(-movement.airdash_speed + penalty)
 			elseif self.vals.dir == hash("moveUp") then
 				movement:update_vertical_speed(movement.airdash_speed)
 			elseif self.vals.dir == hash("moveDown") then
-				movement:update_vertical_speed(-movement.airdash_speed - 100)
+				movement:update_vertical_speed(-movement.airdash_speed - 80)
 			elseif self.vals.dir == hash("moveRight") then
-				if movement.facing_dir.x == -1 then penalty = -110 end
+				if movement.facing_dir.x == -1 then penalty = -90 end
 				movement:update_horizontal_speed(movement.airdash_speed + penalty)
 			end
 		end,
@@ -44,8 +46,12 @@ function airdashing.new(movement, collision, inputs, fsm)
 				if fsm.state_duration < 18 and fsm.state_duration > 10 then
 					movement:rotate_dir(-angle_q * dir)
 				end
-			elseif self.vals.dir == hash("moveUp") or self.vals.dir == hash("moveDown") then
+			elseif self.vals.dir == hash("moveUp") then
 				if fsm.state_duration < 22 and fsm.state_duration > 12 then
+					movement:rotate_dir(angle_q * dir)
+				end
+			elseif self.vals.dir == hash("moveDown") then
+				if fsm.state_duration < 26 and fsm.state_duration > 16 then
 					movement:rotate_dir(angle_q * dir)
 				end
 			end
@@ -55,11 +61,7 @@ function airdashing.new(movement, collision, inputs, fsm)
 			end
 
 			if collision.contact.d then
-				if movement.move_dir.x == 0 then 
-					fsm:stop()
-				else
-					fsm:walk()
-				end
+				fsm:land()
 			end
 
 			if fsm.state_duration < 1 then

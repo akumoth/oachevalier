@@ -15,7 +15,8 @@ function idle.new(movement, collision, inputs, fsm)
 			else
 				sprite.play_flipbook("spr#spr", hash("idle"))
 			end
-			
+
+			collision.push = true
 			collision.do_snap = true
 			-- While on the ground, the actor's speed is always angled slightly towards the ground 
 			-- to get them colliding into slopes.

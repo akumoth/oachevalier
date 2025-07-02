@@ -1,0 +1,22 @@
+name: "player"
+instances {
+  id: "camera"
+  prototype: "/main/actor/camera/camera.go"
+}
+instances {
+  id: "actor"
+  prototype: "/main/actor/hitboxes/game_objects/player.go"
+  children: "spr"
+}
+scale_along_z: 0
+embedded_instances {
+  id: "spr"
+  data: "components {\n"
+  "  id: \"spr\"\n"
+  "  component: \"/main/actor/sprites/actor_sprite.sprite\"\n"
+  "  position {\n"
+  "    y: 5.0\n"
+  "  }\n"
+  "}\n"
+  ""
+}

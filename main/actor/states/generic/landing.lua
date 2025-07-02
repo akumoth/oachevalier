@@ -10,7 +10,10 @@ function landing.new(movement, collision, inputs, fsm, hitboxman)
 		name = 'landing',
 		enter = function(from)
 			sprite.play_flipbook("spr#spr", hash("landing"))
+
+			collision.push = true
 			collision.do_snap = true
+
 			movement:update_vertical_speed(movement.slope_suck)
 
 			if hitboxman.cancel_land then

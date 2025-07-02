@@ -63,8 +63,10 @@ function hitboxman:update()
 	local flip = self.movement.facing_dir.x < 0
 
 	-- Immediately nope out if we already have spawned the needed hitboxes.
-	if current_anim == self.last_hitbox.anim and current_frame == self.last_hitbox.frame then return end	
-
+	if current_anim == self.last_hitbox.anim and current_frame == self.last_hitbox.frame and next(self.current_hitboxes) == {} then 
+		return 
+	end	
+	
 	if self.hitboxes[current_anim] ~= {} and self.hitboxes[current_anim][current_frame] ~= nil then 
 
 		if self.hitboxes[current_anim][current_frame]['hitbox_data'] ~= nil then

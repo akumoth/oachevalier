@@ -7,6 +7,10 @@ function foxtrot.new(movement, collision, inputs, fsm)
 	local foxtrot_state = state({
 		name = 'foxtrot',
 		enter = function(self, from) 
+			inputs.erase_buffer({"tap_left","tap_right"})
+			
+			collision.push = true
+			
 			sprite.play_flipbook("spr#spr", hash("idle"))
 			-- The first foxtrot always follows the player's facing direction,
 			-- but the second one follows their last tapped direction.
